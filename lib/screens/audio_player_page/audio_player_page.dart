@@ -1,5 +1,4 @@
-import 'dart:async';
-
+import 'package:audio_player/config/print_color.dart';
 import 'package:audio_player/cubit/music_cubit.dart';
 import 'package:audio_player/cubit/music_state.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
@@ -7,21 +6,19 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// ignore: must_be_immutable
 class AudioPlayerPage extends StatefulWidget {
-  AudioPlayerPage({super.key});
+  const AudioPlayerPage({super.key});
 
   @override
   State<AudioPlayerPage> createState() => _AudioPlayerPageState();
 }
 
 class _AudioPlayerPageState extends State<AudioPlayerPage> {
-  int currentMusic = 0;
-
   final player = AudioPlayer();
 
+  List<void Function(PlayerState)> listeners = [];
+
   Duration maxDuration = const Duration(seconds: 0);
-  Duration time = const Duration(seconds: 0);
 
   void getMaxDuration() {
     player.getDuration().then((value) {
@@ -29,20 +26,41 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     });
   }
 
-  void getTime() {
-    Timer(Duration(seconds: 1), () {
-      player.getDuration().then((value) {
-        time = value ?? Duration(seconds: 0);
-        setState(() {});
-      });
-    });
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+    player.onPlayerStateChanged.listen(
+      (it) {
+        switch (it) {
+          case PlayerState.stopped:
+            break;
+          case PlayerState.completed:
+            context
+                .read<MusicCubit>()
+                .nextMusic(player)
+                .then((value) => getMaxDuration());
+            break;
+          default:
+            break;
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    player.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
-    final musicCubit = context.read<MusicCubit>();
+    final MusicCubit musicCubit = context.read<MusicCubit>();
 
     return SafeArea(
       child: Scaffold(
@@ -82,24 +100,25 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                   Container(
                     width: width,
                     height: height * 0.3,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
                         image: DecorationImage(
                             image: NetworkImage(
-                                'https://cdn.voh.com.vn/voh/Image/2018/12/20/113569468787218822010901725631029n2_20181220132032.jpg'),
+                                musics[musicCubit.state.currentMusic].image),
                             fit: BoxFit.cover)),
                   ),
                   const SizedBox(
                     height: 30,
                   ),
                   Text(
-                    musics[state.currentMusic].name,
+                    musics[musicCubit.state.currentMusic].name,
                     style: const TextStyle(
                         fontSize: 20,
                         color: Colors.white,
                         fontWeight: FontWeight.w600),
                   ),
                   Text(
-                    musics[state.currentMusic].author,
+                    musics[musicCubit.state.currentMusic].author,
                     style: TextStyle(
                         fontSize: 15,
                         color: Colors.white.withOpacity(0.6),
@@ -112,6 +131,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                     stream: player.onPositionChanged,
                     builder: (context, snapshot) {
                       return ProgressBar(
+                        timeLabelTextStyle: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
                         thumbColor: Colors.white,
                         progressBarColor: Colors.white,
                         baseBarColor: Colors.grey,
@@ -133,12 +156,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                       IconButton(
                           style: IconButton.styleFrom(
                               backgroundColor: Colors.white),
-                          onPressed: () {
-                            player.stop();
-                            musicCubit.backMusic();
-                            player.play(UrlSource(musics[currentMusic].path));
+                          onPressed: () async {
+                            await musicCubit.backMusic(player);
                             getMaxDuration();
-                            getTime();
                           },
                           icon: const Icon(
                             Icons.skip_previous,
@@ -148,30 +168,23 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                       IconButton(
                           style: IconButton.styleFrom(
                               backgroundColor: Colors.white),
-                          onPressed: () {
-                            player.state == PlayerState.playing
-                                ? player.pause()
-                                : player.play(
-                                    UrlSource(musics[state.currentMusic].path));
-                            musicCubit.playAndStopMusic();
+                          onPressed: () async {
+                            await musicCubit.playAndStopMusic(player);
                             getMaxDuration();
-                            getTime();
                           },
                           icon: Icon(
-                            state.isPlaying ? Icons.pause : Icons.play_arrow,
+                            musicCubit.state.isPlaying
+                                ? Icons.pause
+                                : Icons.play_arrow,
                             color: Colors.blue,
                             size: 40,
                           )),
                       IconButton(
                           style: IconButton.styleFrom(
                               backgroundColor: Colors.white),
-                          onPressed: () {
-                            player.stop();
-                            musicCubit.nextMusic();
-                            player.play(
-                                UrlSource(musics[state.currentMusic].path));
+                          onPressed: () async {
+                            await musicCubit.nextMusic(player);
                             getMaxDuration();
-                            getTime();
                           },
                           icon: const Icon(
                             Icons.skip_next,
