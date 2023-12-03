@@ -14,7 +14,7 @@ class _SplashPageState extends State<SplashPage> {
   void nextPage(BuildContext context) {
     Timer(const Duration(seconds: 2), () {
       Navigator.pushReplacement(context,
-          MaterialPageRoute(builder: (context) =>  AudioPlayerPage()));
+          MaterialPageRoute(builder: (context) => const AudioPlayerPage()));
     });
   }
 
@@ -31,8 +31,8 @@ class _SplashPageState extends State<SplashPage> {
         height: MediaQuery.of(context).size.height,
         width: MediaQuery.of(context).size.width,
         color: Colors.blue,
-        child: Center(
-          child: const Text(
+        child: const Center(
+          child: Text(
             'Audio Player',
             style: TextStyle(
                 color: Colors.white, fontSize: 30, fontWeight: FontWeight.w600),
